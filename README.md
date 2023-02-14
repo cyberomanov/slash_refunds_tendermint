@@ -7,6 +7,8 @@ In order for this to work, you will need access to a node that has history as fa
 Most public nodes only keep ~100 blocks! We maintain the last 10,000 blocks for every chain we validate on.
 If you need an endpoint for a network [we support](https://www.lavenderfive.com/), please reach out! 
 
+Note also that this will only refund the **LATEST** slashing event!!
+
 ## Requirements:
 1. You will need to install the dependencies. 
 
@@ -22,6 +24,10 @@ Using pip:
 
 2. In order to send the commands, the daemon will need to be installed locally. This is not ideal, but was the choice
 made early on. Rebuilding with https://github.com/fetchai/cosmpy would be neato.
+
+3. Add your refund mnemonics to the daemon as `--keyring-backend test` that way you won't need to enter a password. Do
+**NOT** use your validator wallet for the refunds. Create a different wallet, load up the amount you'll need to refund,
+and go from there.
 
 ## Usage:
 ```

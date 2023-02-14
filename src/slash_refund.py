@@ -43,7 +43,8 @@ def getResponse(end_point, query_field=None, query_msg=None):
 def getSlashBlock(url: str, val_address: str) -> int:
     endpoint = url + "/block_search?query=%22slash.address=%27" + val_address + "%27%22"
     data = getResponse(endpoint)
-    latest_slash = len(data["result"]["blocks"]) - 1
+    latest_slash = 0
+    # earliest_slash = len(data["result"]["blocks"]) - 1
     return data["result"]["blocks"][latest_slash]["block"]["header"]["height"]
 
 
