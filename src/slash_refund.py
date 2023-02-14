@@ -59,7 +59,8 @@ def getDelegationAmounts(
     while more_pages:
         endpoint_choice = (page % len(endpoints)) - 1
         command = f"{BIN_DIR}{daemon} q staking delegations-to {valoper_address} --height {block_height} --page {page} --output json --limit {page_limit} --node {endpoints[endpoint_choice]} --chain-id {chain_id}"
-        logger.info(f'Delegation amount command: {command}')
+        logger.debug(f'Delegation amount command: {command}')
+        logger.info(f'Page: {page}')
         result = run(
             command,
             shell=True,
@@ -67,7 +68,7 @@ def getDelegationAmounts(
             text=True,
         )
         if result.returncode == 1:
-            logger.info(endpoints[endpoint_choice])
+            logger.info(f'Failed endpoint: {endpoints[endpoint_choice]}')
             continue
         response = json.loads(result.stdout)
 
@@ -80,7 +81,7 @@ def getDelegationAmounts(
                 logger.info(delegator_address)
         page += 1
         sleep(2)
-        if len(response["delegation_responses"]) < page_limit < 20:
+        if len(response["delegation_responses"]) < page_limit:
             more_pages = False
 
     return delegations
@@ -94,10 +95,11 @@ def calculateRefundAmounts(
     pre_slash_delegations = getDelegationAmounts(
         daemon, endpoint, chain_id, pre_slack_block, valoper_address
     )
-
+    logger.debug(f'Pre slash amounts: {pre_slash_delegations}')
     post_slash_delegations = getDelegationAmounts(
         daemon, endpoint, chain_id, slash_block, valoper_address
     )
+    logger.debug(f'Post slash amounts: {post_slash_delegations}')
 
     if len(pre_slash_delegations) != len(post_slash_delegations):
         raise ("Something went awry on delegation calcs")
@@ -105,9 +107,10 @@ def calculateRefundAmounts(
         refund_amount = int(pre_slash_delegations[delegation_address]) - int(
             post_slash_delegations[delegation_address]
         )
-        if refund_amount > 100:
+        if refund_amount > 10000:
             refund_amounts[delegation_address] = refund_amount
 
+    logger.info(f'Refund amounts: {len(refund_amounts)}')
     return refund_amounts
 
 
@@ -281,11 +284,10 @@ def main():
     BIN_DIR = get_daemon_path(daemon)
 
     slash_block = getSlashBlock(endpoint, valcons_address)
-    logger.info(slash_block)
+    logger.info(f'Slash block: {slash_block}')
     refund_amounts = calculateRefundAmounts(
         daemon, endpoint, chain_id, slash_block, valoper_address
     )
-    logger.info(refund_amounts)
     batch_count = buildRefundScript(refund_amounts, send_address, denom, memo)
     issue_refunds(batch_count, daemon, chain_id, keyname, endpoint)
 
