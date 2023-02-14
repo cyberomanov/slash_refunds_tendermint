@@ -58,8 +58,10 @@ def getDelegationAmounts(
 
     while more_pages:
         endpoint_choice = (page % len(endpoints)) - 1
+        command = f"{BIN_DIR}{daemon} q staking delegations-to {valoper_address} --height {block_height} --page {page} --output json --limit {page_limit} --node {endpoints[endpoint_choice]} --chain-id {chain_id}"
+        logger.info(f'Delegation amount command: {command}')
         result = run(
-            f"{BIN_DIR}{daemon} q staking delegations-to {valoper_address} --height {block_height} --page {page} --output json --limit {page_limit} --node {endpoints[endpoint_choice]} --chain-id {chain_id}",
+            command,
             shell=True,
             capture_output=True,
             text=True,
@@ -174,6 +176,8 @@ def issue_refunds(
 ):
     i = 0
     while i < batch_count:
+        command = f"{BIN_DIR}{daemon} tx sign /tmp/dist_{i}.json --from {keyname} -ojson --output-document ~/dist_signed.json --node {node} --chain-id {chain_id} --keyring-backend test",
+        logger.debug(f'command being run: {command}')
         result = run(
             f"{BIN_DIR}{daemon} tx sign /tmp/dist_{i}.json --from {keyname} -ojson --output-document ~/dist_signed.json --node {node} --chain-id {chain_id} --keyring-backend test",
             shell=True,
@@ -277,9 +281,11 @@ def main():
     BIN_DIR = get_daemon_path(daemon)
 
     slash_block = getSlashBlock(endpoint, valcons_address)
+    logger.info(slash_block)
     refund_amounts = calculateRefundAmounts(
         daemon, endpoint, chain_id, slash_block, valoper_address
     )
+    logger.info(refund_amounts)
     batch_count = buildRefundScript(refund_amounts, send_address, denom, memo)
     issue_refunds(batch_count, daemon, chain_id, keyname, endpoint)
 
@@ -291,8 +297,9 @@ def get_daemon_path(daemon: str) -> str:
             capture_output=True,
             text=True,
         )
-    
-    return result.stdout.strip().removesuffix(daemon)
+    binary_path = result.stdout.strip().removesuffix(daemon)
+    logger.info(f'Binary path: {binary_path}')
+    return binary_path
 
 if __name__ == "__main__":
     main()
