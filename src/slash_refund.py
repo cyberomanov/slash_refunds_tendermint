@@ -1,11 +1,18 @@
 import argparse
 import json
 import requests
+import logging
 
 from subprocess import run
 from time import sleep
+
 BIN_DIR = ""  # if this isn't empty, make sure it ends with a slash
 
+logger = logging.getLogger(__name__)
+stream_handler = logging.StreamHandler()
+stream_handler.setLevel(logging.DEBUG)
+logger.addHandler(stream_handler)
+logger.setLevel(logging.INFO)
 
 def getResponse(end_point, query_field=None, query_msg=None):
     response = None
@@ -16,17 +23,19 @@ def getResponse(end_point, query_field=None, query_msg=None):
         else:
             response = requests.get(end_point, params={})
     except Exception as e:
-        print(e)
+        logger.exception(e)
 
     if response is not None and response.status_code == 200:
         return json.loads(response.text)
     else:
         if response is not None:
-            print("Response Error")
-            print(str(response.status_code))
-            print(str(response.text))
+            logger.error('\n\t'.join((
+                "Response Error",
+                str(response.status_code),
+                str(response.text),
+            )))
         else:
-            print("Response is None")
+            logger.error("Response is None")
 
         return None
 
@@ -56,7 +65,7 @@ def getDelegationAmounts(
             text=True,
         )
         if result.returncode == 1:
-            print(endpoints[endpoint_choice])
+            logger.info(endpoints[endpoint_choice])
             continue
         response = json.loads(result.stdout)
 
@@ -66,7 +75,7 @@ def getDelegationAmounts(
             if delegator_address not in delegations:
                 delegations[delegator_address] = delegation_amount
             else:
-                print(delegator_address)
+                logger.info(delegator_address)
         page += 1
         sleep(2)
         if len(response["delegation_responses"]) < page_limit < 20:
