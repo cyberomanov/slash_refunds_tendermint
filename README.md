@@ -2,6 +2,11 @@
 
 The purpose of this script is to create a json file to refund users from a slash event.
 
+## Important Notes:
+In order for this to work, you will need access to a node that has history as far back as your slashing event. 
+Most public nodes only keep ~100 blocks! We maintain the last 10,000 blocks for every chain we validate on.
+If you need an endpoint for a network [we support](https://www.lavenderfive.com/), please reach out! 
+
 ## Requirements:
 1. You will need to install the dependencies. 
 
@@ -18,7 +23,7 @@ Using pip:
 2. In order to send the commands, the daemon will need to be installed locally. This is not ideal, but was the choice
 made early on. Rebuilding with https://github.com/fetchai/cosmpy would be neato.
 
-Usage:
+## Usage:
 ```
 git clone https://github.com/LavenderFive/refund.git
 cd tendermint_refund
