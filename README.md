@@ -21,8 +21,8 @@ In addition to the original Lavender.Five nodes version of this script, there ar
 line options, `--dry_run` and `-f`/`--refund_file`. Details below:
 
 ```bash
-$ python3 src/refund.py --help
-usage: refund.py [-h] --denom DENOM --daemon DAEMON -c CHAIN_ID -e ENDPOINT -vc VALCONS_ADDRESS -v VALOPER_ADDRESS -s SEND_ADDRESS [-m MEMO] -k KEYNAME [--dry_run [DRY_RUN]] [-f REFUND_FILE]
+$ python3 src/slash_refund.py --help
+usage: slash_refund.py [-h] --denom DENOM --daemon DAEMON -c CHAIN_ID -e ENDPOINT -vc VALCONS_ADDRESS -v VALOPER_ADDRESS -s SEND_ADDRESS [-m MEMO] -k KEYNAME [--dry_run [DRY_RUN]] [-f REFUND_FILE]
 
 Create json file for refunding slashing to delegators
 
