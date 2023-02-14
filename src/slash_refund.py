@@ -5,6 +5,7 @@ import logging
 
 from subprocess import run
 from time import sleep
+from utils.csv_utils import writeRefundsCsv
 
 BIN_DIR = ""  # if this isn't empty, make sure it ends with a slash
 
@@ -13,6 +14,7 @@ stream_handler = logging.StreamHandler()
 stream_handler.setLevel(logging.DEBUG)
 logger.addHandler(stream_handler)
 logger.setLevel(logging.INFO)
+
 
 def getResponse(end_point, query_field=None, query_msg=None):
     response = None
@@ -29,11 +31,15 @@ def getResponse(end_point, query_field=None, query_msg=None):
         return json.loads(response.text)
     else:
         if response is not None:
-            logger.error('\n\t'.join((
-                "Response Error",
-                str(response.status_code),
-                str(response.text),
-            )))
+            logger.error(
+                "\n\t".join(
+                    (
+                        "Response Error",
+                        str(response.status_code),
+                        str(response.text),
+                    )
+                )
+            )
         else:
             logger.error("Response is None")
 
@@ -60,8 +66,8 @@ def getDelegationAmounts(
     while more_pages:
         endpoint_choice = (page % len(endpoints)) - 1
         command = f"{BIN_DIR}{daemon} q staking delegations-to {valoper_address} --height {block_height} --page {page} --output json --limit {page_limit} --node {endpoints[endpoint_choice]} --chain-id {chain_id}"
-        logger.debug(f'Delegation amount command: {command}')
-        logger.info(f'Page: {page}')
+        logger.debug(f"Delegation amount command: {command}")
+        logger.info(f"Page: {page}")
         result = run(
             command,
             shell=True,
@@ -69,7 +75,7 @@ def getDelegationAmounts(
             text=True,
         )
         if result.returncode == 1:
-            logger.info(f'Failed endpoint: {endpoints[endpoint_choice]}')
+            logger.info(f"Failed endpoint: {endpoints[endpoint_choice]}")
             continue
         response = json.loads(result.stdout)
 
@@ -96,11 +102,11 @@ def calculateRefundAmounts(
     pre_slash_delegations = getDelegationAmounts(
         daemon, endpoint, chain_id, pre_slack_block, valoper_address
     )
-    logger.debug(f'Pre slash amounts: {pre_slash_delegations}')
+    logger.debug(f"Pre slash amounts: {pre_slash_delegations}")
     post_slash_delegations = getDelegationAmounts(
         daemon, endpoint, chain_id, slash_block, valoper_address
     )
-    logger.debug(f'Post slash amounts: {post_slash_delegations}')
+    logger.debug(f"Post slash amounts: {post_slash_delegations}")
 
     if len(pre_slash_delegations) != len(post_slash_delegations):
         raise ("Something went awry on delegation calcs")
@@ -111,7 +117,7 @@ def calculateRefundAmounts(
         if refund_amount > 10000:
             refund_amounts[delegation_address] = refund_amount
 
-    logger.info(f'Refund amounts: {len(refund_amounts)}')
+    logger.info(f"Refund amounts: {len(refund_amounts)}")
     return refund_amounts
 
 
@@ -176,27 +182,47 @@ def buildRefundScript(
 
 
 def issue_refunds(
-    batch_count: int, daemon: str, chain_id: str, keyname: str, node: str
+    batch_count: int,
+    daemon: str,
+    chain_id: str,
+    keyname: str,
+    node: str,
+    broadcast: bool = True,
 ):
     i = 0
     while i < batch_count:
-        command = f"{BIN_DIR}{daemon} tx sign /tmp/dist_{i}.json --from {keyname} -ojson --output-document ~/dist_signed.json --node {node} --chain-id {chain_id} --keyring-backend test",
-        logger.debug(f'command being run: {command}')
+        sign_cmd = (
+            f"{BIN_DIR}{daemon} tx sign /tmp/dist_{i}.json --from {keyname} -ojson "
+            f"--output-document ~/dist_{i}_signed.json --node {node} --chain-id {chain_id} "
+            f"--keyring-backend test"
+        )
+        broadcast_cmd = (
+            f"{BIN_DIR}{daemon} tx broadcast ~/dist_{i}_signed.json --node {node} "
+            f"--chain-id {chain_id}"
+        )
+
+        # sign refund
         result = run(
-            f"{BIN_DIR}{daemon} tx sign /tmp/dist_{i}.json --from {keyname} -ojson --output-document ~/dist_signed.json --node {node} --chain-id {chain_id} --keyring-backend test",
+            sign_cmd,
             shell=True,
             capture_output=True,
             text=True,
         )
         sleep(1)
-        result = run(
-            f"{BIN_DIR}{daemon} tx broadcast ~/dist_signed.json --node {node} --chain-id {chain_id}",
-            shell=True,
-            capture_output=True,
-            text=True,
-        )
-        i += 1
-        sleep(15)
+
+        if broadcast:
+            # broadcast refund
+            result = run(
+                broadcast_cmd,
+                shell=True,
+                capture_output=True,
+                text=True,
+            )
+            logger.info(f"Broadcasted refund: {result}")
+
+        # if this is not the last batch, sleep
+        if i < batch_count:
+            sleep(16)
 
 
 def parseArgs():
@@ -266,7 +292,53 @@ def parseArgs():
         required=True,
         help="Wallet to issue refunds from",
     )
+    parser.add_argument(
+        "-f",
+        "--refund_file",
+        dest="refund_file",
+        required=False,
+        default=None,
+        type=open,
+        help=(
+            "CSV file that encodes the delegator addresses and refund amounts. Note: delegator "
+            "address is expected to be in the first column and the refund amount in [DENOM] is "
+            "expected to be in the fourth column."
+        ),
+    )
+    parser.add_argument(
+        "--dry_run",
+        dest="dry_run",
+        action="store_const",
+        required=False,
+        default=False,
+        const=True,
+        help="Indicates whether this should actually broadcast transactions or not",
+    )
+    parser.add_argument(
+        "--no_broadcast",
+        dest="no_broadcast",
+        action="store_const",
+        required=False,
+        default=False,
+        const=True,
+        help=(
+            "Similar to dry run, but in this case the tx JSON is output and signed, but not "
+            "broadcast. This is useful for testing."
+        ),
+    )
     return parser.parse_args()
+
+
+def get_daemon_path(daemon: str) -> str:
+    result = run(
+        f"which {daemon}",
+        shell=True,
+        capture_output=True,
+        text=True,
+    )
+    binary_path = result.stdout.strip().removesuffix(daemon)
+    logger.info(f"Binary path: {binary_path}")
+    return binary_path
 
 
 def main():
@@ -281,28 +353,27 @@ def main():
     send_address = args.send_address
     memo = args.memo
     keyname = args.keyname
+    refund_file = args.refund_file
+    dry_run = args.dry_run
+    should_broadcast = not args.no_broadcast
+    logger.debug(f"DEBUG: args: {args}")
 
     BIN_DIR = get_daemon_path(daemon)
 
     slash_block = getSlashBlock(endpoint, valcons_address)
-    logger.info(f'Slash block: {slash_block}')
+    logger.info(f"Slash block: {slash_block}")
     refund_amounts = calculateRefundAmounts(
         daemon, endpoint, chain_id, slash_block, valoper_address
     )
+
+    writeRefundsCsv(refund_amounts)
+
     batch_count = buildRefundScript(refund_amounts, send_address, denom, memo)
-    issue_refunds(batch_count, daemon, chain_id, keyname, endpoint)
-
-
-def get_daemon_path(daemon: str) -> str:
-    result = run(
-            f"which {daemon}",
-            shell=True,
-            capture_output=True,
-            text=True,
+    if not dry_run:
+        issue_refunds(
+            batch_count, daemon, chain_id, keyname, endpoint, should_broadcast
         )
-    binary_path = result.stdout.strip().removesuffix(daemon)
-    logger.info(f'Binary path: {binary_path}')
-    return binary_path
+
 
 if __name__ == "__main__":
     main()
