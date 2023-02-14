@@ -12,13 +12,11 @@ Note also that this will only refund the **LATEST** slashing event!!
 ## Requirements:
 1. You will need to install the dependencies. 
 
-Using poetry:
 ```python:
+  # using poetry:
   poetry install
-```
 
-Using pip:
-```python:
+  # using pip:
   pip install
 ```
 
