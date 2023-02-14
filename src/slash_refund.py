@@ -253,6 +253,7 @@ def parseArgs():
 
 
 def main():
+    global BIN_DIR
     args = parseArgs()
     denom = args.denom
     daemon = args.daemon
@@ -264,6 +265,8 @@ def main():
     memo = args.memo
     keyname = args.keyname
 
+    BIN_DIR = get_daemon_path(daemon)
+
     slash_block = getSlashBlock(endpoint, valcons_address)
     refund_amounts = calculateRefundAmounts(
         daemon, endpoint, chain_id, slash_block, valoper_address
@@ -271,6 +274,16 @@ def main():
     batch_count = buildRefundScript(refund_amounts, send_address, denom, memo)
     issue_refunds(batch_count, daemon, chain_id, keyname, endpoint)
 
+
+def get_daemon_path(daemon: str) -> str:
+    result = run(
+            f"which {daemon}",
+            shell=True,
+            capture_output=True,
+            text=True,
+        )
+    
+    return result.stdout.strip().removesuffix(daemon)
 
 if __name__ == "__main__":
     main()
