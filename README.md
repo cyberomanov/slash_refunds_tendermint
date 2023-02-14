@@ -39,8 +39,8 @@ python3 src/slash_refund.py --denom uatom --daemon gaiad --c cosmoshub-4 -e http
 
 This will output two different kinds of files
 
-* `/tmp/dist_<denom>_<batch #>.json` which is the unsigned JSON representation of a batch transaction
-* `~/dist_<denom>_<batch #>_signed.json` which represents the signed, but not yet broadcast batch transaaction
+* `/tmp/dist_<batch #>.json` which is the unsigned JSON representation of a batch transaction
+* `~/dist_<batch #>_signed.json` which represents the signed, but not yet broadcast batch transaaction
 
 ```bash
 $ python3 src/slash_refund.py --help
