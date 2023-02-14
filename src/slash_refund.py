@@ -4,6 +4,7 @@ import requests
 
 from subprocess import run
 from time import sleep
+BIN_DIR = ""  # if this isn't empty, make sure it ends with a slash
 
 
 def getResponse(end_point, query_field=None, query_msg=None):
@@ -49,7 +50,7 @@ def getDelegationAmounts(
     while more_pages:
         endpoint_choice = (page % len(endpoints)) - 1
         result = run(
-            f"/home/schultzie/go/bin/{daemon} q staking delegations-to {valoper_address} --height {block_height} --page {page} --output json --limit {page_limit} --node {endpoints[endpoint_choice]} --chain-id {chain_id}",
+            f"{BIN_DIR}{daemon} q staking delegations-to {valoper_address} --height {block_height} --page {page} --output json --limit {page_limit} --node {endpoints[endpoint_choice]} --chain-id {chain_id}",
             shell=True,
             capture_output=True,
             text=True,
@@ -165,14 +166,14 @@ def issue_refunds(
     i = 0
     while i < batch_count:
         result = run(
-            f"/home/schultzie/go/bin/{daemon} tx sign /tmp/dist_{i}.json --from {keyname} -ojson --output-document ~/dist_signed.json --node {node} --chain-id {chain_id} --keyring-backend test",
+            f"{BIN_DIR}{daemon} tx sign /tmp/dist_{i}.json --from {keyname} -ojson --output-document ~/dist_signed.json --node {node} --chain-id {chain_id} --keyring-backend test",
             shell=True,
             capture_output=True,
             text=True,
         )
         sleep(1)
         result = run(
-            f"/home/schultzie/go/bin/{daemon} tx broadcast ~/dist_signed.json --node {node} --chain-id {chain_id}",
+            f"{BIN_DIR}{daemon} tx broadcast ~/dist_signed.json --node {node} --chain-id {chain_id}",
             shell=True,
             capture_output=True,
             text=True,
