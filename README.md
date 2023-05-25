@@ -29,8 +29,8 @@ and go from there.
 
 ## Usage:
 ```
-git clone https://github.com/LavenderFive/refund.git
-cd tendermint_refund
+git clone https://github.com/LavenderFive/slash_refunds_tendermint.git
+cd slash_refunds_tendermint
 python3 src/slash_refund.py --denom {denom} --daemon {daemon} --c {chain_id} -e {rpc_endpoint} -vc {valcons_address} -v {valoper_address} -s {send_address}
 
 # example:
