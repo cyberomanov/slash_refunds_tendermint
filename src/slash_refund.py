@@ -2,6 +2,7 @@ import argparse
 import json
 import requests
 import logging
+import shutil
 
 from subprocess import run
 from time import sleep
@@ -114,10 +115,10 @@ def calculateRefundAmounts(
         refund_amount = int(pre_slash_delegations[delegation_address]) - int(
             post_slash_delegations[delegation_address]
         )
-        if refund_amount > 10000:
+        if refund_amount > 10000000000000000:
             refund_amounts[delegation_address] = refund_amount
 
-    logger.info(f"Refund amounts: {len(refund_amounts)}")
+    logger.info(f"Number of refunds: {len(refund_amounts)}")
     return refund_amounts
 
 
@@ -193,11 +194,11 @@ def issue_refunds(
     while i < batch_count:
         sign_cmd = (
             f"{BIN_DIR}{daemon} tx sign /tmp/dist_{i}.json --from {keyname} -ojson "
-            f"--output-document ~/dist_{i}_signed.json --node {node} --chain-id {chain_id} "
-            f"--keyring-backend test"
+            f"--output-document /tmp/dist_{i}_signed.json --node {node} --chain-id {chain_id} "
+            f"--keyring-backend os"
         )
         broadcast_cmd = (
-            f"{BIN_DIR}{daemon} tx broadcast ~/dist_{i}_signed.json --node {node} "
+            f"{BIN_DIR}{daemon} tx broadcast /tmp/dist_{i}_signed.json --node {node} "
             f"--chain-id {chain_id}"
         )
 
@@ -219,11 +220,12 @@ def issue_refunds(
                 text=True,
             )
             logger.info(f"Broadcasted refund: {result}")
+            shutil.move(f"/tmp/dist_{i}_signed.json", f"/tmp/dist_{i}_signed_refunded.json")
 
+        i += 1
         # if this is not the last batch, sleep
         if i < batch_count:
             sleep(16)
-
 
 def parseArgs():
     parser = argparse.ArgumentParser(
