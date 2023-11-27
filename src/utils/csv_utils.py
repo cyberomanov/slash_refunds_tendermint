@@ -23,7 +23,7 @@ def writeRefundsCsv(refund_amounts: dict):
             refund_sum += refund_amount
 
         writer.writerow(["Total Refund Amount", refund_sum])
-
+    print(f"Total Refund Amount: {refund_sum}")
 
 def getRefundAmountsFromCSV(file_obj, denom):
     refund_amounts = {}
