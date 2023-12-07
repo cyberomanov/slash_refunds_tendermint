@@ -115,7 +115,7 @@ def calculateRefundAmounts(
         refund_amount = int(pre_slash_delegations[delegation_address]) - int(
             post_slash_delegations[delegation_address]
         )
-        if refund_amount > 10000000000000000:
+        if refund_amount > 100000000000000:
             refund_amounts[delegation_address] = refund_amount
 
     logger.info(f"Number of refunds: {len(refund_amounts)}")
