@@ -76,11 +76,10 @@ optional arguments:
 
 
 
-### Previous Attempts
+## No Liability
 
-You may be tempted to believe the best way forward is to query against a node for addresses using block height, a la:
-```
-{daemon} q staking delegations-to {valoper_address} --height {block_height} --page {page} --output json --limit {page_limit} --node {endpoint} --chain-id {chain_id}
-```
+As far as the law allows, this software comes as is, without any warranty or condition, 
+and no contributor will be liable to anyone for any damages related to this software or 
+this license, under any kind of legal claim.
 
-And with under 1500 delegators, you would be correct. Anything above that, and 10 load-balanced nodes was insufficient.
+Please do your due diligence and review the transactions before they are sent!
