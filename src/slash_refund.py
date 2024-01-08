@@ -57,7 +57,7 @@ def getSlashBlock(url: str, val_address: str) -> int:
 
 
 def getDelegationAmounts(
-        daemon: str, endpoint: str, chain_id: str, block_height: int, valoper_address: str
+    daemon: str, endpoint: str, chain_id: str, block_height: int, valoper_address: str
 ):
     endpoints = [endpoint]
     delegations = {}
@@ -67,13 +67,15 @@ def getDelegationAmounts(
 
     while more_pages:
         endpoint_choice = (page % len(endpoints)) - 1
-        command = f"{BIN_DIR}{daemon} q staking delegations-to {valoper_address} " \
-                  f"--height {block_height} " \
-                  f"--page {page} " \
-                  f"--output json " \
-                  f"--limit {page_limit} " \
-                  f"--node {endpoints[endpoint_choice]} " \
-                  f"--chain-id {chain_id}"
+        command = (
+            f"{BIN_DIR}{daemon} q staking delegations-to {valoper_address} "
+            f"--height {block_height} "
+            f"--page {page} "
+            f"--output json "
+            f"--limit {page_limit} "
+            f"--node {endpoints[endpoint_choice]} "
+            f"--chain-id {chain_id}"
+        )
         logger.debug(f"Delegation amount command: {command}")
         logger.info(f"Page: {page}")
         result = run(
@@ -103,7 +105,12 @@ def getDelegationAmounts(
 
 
 def calculateRefundAmounts(
-        daemon: str, endpoint: str, chain_id: str, slash_block: int, valoper_address: str, min_refund: int
+    daemon: str,
+    endpoint: str,
+    chain_id: str,
+    slash_block: int,
+    valoper_address: str,
+    min_refund: int,
 ):
     pre_slack_block = int(slash_block) - 5
     refund_amounts = {}
@@ -130,7 +137,7 @@ def calculateRefundAmounts(
 
 
 def buildRefundJSON(
-        refund_amounts: dict, send_address: str, denom: str, memo: str
+    refund_amounts: dict, send_address: str, denom: str, memo: str
 ) -> dict:
     data = {
         "body": {
@@ -165,7 +172,7 @@ def buildRefundJSON(
 
 
 def buildRefundScript(
-        refund_amounts: dict, send_address: str, denom: str, memo: str
+    refund_amounts: dict, send_address: str, denom: str, memo: str
 ) -> int:
     batch_size = 75
     batch = 0
@@ -173,7 +180,7 @@ def buildRefundScript(
     batched = {}
     while batch < len(refund_amounts):
         batched_refund_amounts = {}
-        for x in list(refund_amounts)[batch: batch + batch_size]:
+        for x in list(refund_amounts)[batch : batch + batch_size]:
             batched_refund_amounts[x] = refund_amounts[x]
         batches.append(batched_refund_amounts)
         batch += batch_size
@@ -190,12 +197,12 @@ def buildRefundScript(
 
 
 def issue_refunds(
-        batch_count: int,
-        daemon: str,
-        chain_id: str,
-        keyname: str,
-        node: str,
-        broadcast: bool = True,
+    batch_count: int,
+    daemon: str,
+    chain_id: str,
+    keyname: str,
+    node: str,
+    broadcast: bool = True,
 ):
     i = 0
     while i < batch_count:
@@ -227,7 +234,9 @@ def issue_refunds(
                 text=True,
             )
             logger.info(f"Broadcasted refund: {result}")
-            shutil.move(f"/tmp/dist_{i}_signed.json", f"/tmp/dist_{i}_signed_refunded.json")
+            shutil.move(
+                f"/tmp/dist_{i}_signed.json", f"/tmp/dist_{i}_signed_refunded.json"
+            )
 
         i += 1
         # if this is not the last batch, sleep
@@ -286,7 +295,7 @@ def parseArgs():
         dest="valcons_address",
         required=True,
         help="Valcons address of validator (ex. cosmosvalcons1c5e86exd7jsyhcfqdejltdsagjfrvv8xv22368), "
-             "you can get this by doing {daemon} tendermint show-address",
+        "you can get this by doing {daemon} tendermint show-address",
     )
     parser.add_argument(
         "-v",
@@ -294,7 +303,7 @@ def parseArgs():
         dest="valoper_address",
         required=True,
         help="Valoper address of validator (ex. cosmosvaloper140l6y2gp3gxvay6qtn70re7z2s0gn57zfd832j), "
-             "you can get this by doing {daemon} keys show --bech=val -a {keyname}",
+        "you can get this by doing {daemon} keys show --bech=val -a {keyname}",
     )
     parser.add_argument(
         "-s",
