@@ -200,9 +200,9 @@ def issue_refunds(
     i = 0
     while i < batch_count:
         sign_cmd = (
-            f"{BIN_DIR}{daemon} tx sign /tmp/dist_{i}.json --from {keyname} -ojson "
+            f"{BIN_DIR}{daemon} tx sign /tmp/dist_{i}.json --from {keyname} -o json "
             f"--output-document /tmp/dist_{i}_signed.json --node {node} --chain-id {chain_id} "
-            f"--keyring-backend os"
+            f"--keyring-backend test"
         )
         broadcast_cmd = (
             f"{BIN_DIR}{daemon} tx broadcast /tmp/dist_{i}_signed.json --node {node} "
