@@ -1,11 +1,12 @@
 import argparse
 import json
-import requests
 import logging
 import shutil
-
 from subprocess import run
 from time import sleep
+
+import requests
+
 from utils.csv_utils import writeRefundsCsv
 
 BIN_DIR = ""  # if this isn't empty, make sure it ends with a slash
@@ -56,7 +57,7 @@ def getSlashBlock(url: str, val_address: str) -> int:
 
 
 def getDelegationAmounts(
-    daemon: str, endpoint: str, chain_id: str, block_height: int, valoper_address: str
+        daemon: str, endpoint: str, chain_id: str, block_height: int, valoper_address: str
 ):
     endpoints = [endpoint]
     delegations = {}
@@ -66,7 +67,13 @@ def getDelegationAmounts(
 
     while more_pages:
         endpoint_choice = (page % len(endpoints)) - 1
-        command = f"{BIN_DIR}{daemon} q staking delegations-to {valoper_address} --height {block_height} --page {page} --output json --limit {page_limit} --node {endpoints[endpoint_choice]} --chain-id {chain_id}"
+        command = f"{BIN_DIR}{daemon} q staking delegations-to {valoper_address} " \
+                  f"--height {block_height} " \
+                  f"--page {page} " \
+                  f"--output json " \
+                  f"--limit {page_limit} " \
+                  f"--node {endpoints[endpoint_choice]} " \
+                  f"--chain-id {chain_id}"
         logger.debug(f"Delegation amount command: {command}")
         logger.info(f"Page: {page}")
         result = run(
@@ -96,7 +103,7 @@ def getDelegationAmounts(
 
 
 def calculateRefundAmounts(
-    daemon: str, endpoint: str, chain_id: str, slash_block: int, valoper_address: str
+        daemon: str, endpoint: str, chain_id: str, slash_block: int, valoper_address: str, min_refund: int
 ):
     pre_slack_block = int(slash_block) - 5
     refund_amounts = {}
@@ -115,7 +122,7 @@ def calculateRefundAmounts(
         refund_amount = int(pre_slash_delegations[delegation_address]) - int(
             post_slash_delegations[delegation_address]
         )
-        if refund_amount > 100000000000000:
+        if refund_amount > int(min_refund):
             refund_amounts[delegation_address] = refund_amount
 
     logger.info(f"Number of refunds: {len(refund_amounts)}")
@@ -123,7 +130,7 @@ def calculateRefundAmounts(
 
 
 def buildRefundJSON(
-    refund_amounts: dict, send_address: str, denom: str, memo: str
+        refund_amounts: dict, send_address: str, denom: str, memo: str
 ) -> dict:
     data = {
         "body": {
@@ -158,7 +165,7 @@ def buildRefundJSON(
 
 
 def buildRefundScript(
-    refund_amounts: dict, send_address: str, denom: str, memo: str
+        refund_amounts: dict, send_address: str, denom: str, memo: str
 ) -> int:
     batch_size = 75
     batch = 0
@@ -166,7 +173,7 @@ def buildRefundScript(
     batched = {}
     while batch < len(refund_amounts):
         batched_refund_amounts = {}
-        for x in list(refund_amounts)[batch : batch + batch_size]:
+        for x in list(refund_amounts)[batch: batch + batch_size]:
             batched_refund_amounts[x] = refund_amounts[x]
         batches.append(batched_refund_amounts)
         batch += batch_size
@@ -183,12 +190,12 @@ def buildRefundScript(
 
 
 def issue_refunds(
-    batch_count: int,
-    daemon: str,
-    chain_id: str,
-    keyname: str,
-    node: str,
-    broadcast: bool = True,
+        batch_count: int,
+        daemon: str,
+        chain_id: str,
+        keyname: str,
+        node: str,
+        broadcast: bool = True,
 ):
     i = 0
     while i < batch_count:
@@ -227,6 +234,7 @@ def issue_refunds(
         if i < batch_count:
             sleep(16)
 
+
 def parseArgs():
     parser = argparse.ArgumentParser(
         description="Create json file for refunding slashing to delegators"
@@ -237,6 +245,18 @@ def parseArgs():
         required=True,
         default="uatom",
         help="denom for refunds (ex. uatom)",
+    )
+    parser.add_argument(
+        "--mr",
+        "--min_refund",
+        dest="min_refund",
+        required=False,
+        default=1,
+        help=(
+            "An integer value that sets the minimum threshold for slashing compensation. "
+            "If not specified, defaults to 1. "
+            "(ex. to refund any value more than 0.001 $ATOM, you should set --min_refund 1000)"
+        ),
     )
     parser.add_argument(
         "--daemon",
@@ -265,14 +285,16 @@ def parseArgs():
         "--valcons_address",
         dest="valcons_address",
         required=True,
-        help="Valcons address of validator (ex. cosmosvalcons1c5e86exd7jsyhcfqdejltdsagjfrvv8xv22368), you can get this by doing {daemon} tendermint show-address",
+        help="Valcons address of validator (ex. cosmosvalcons1c5e86exd7jsyhcfqdejltdsagjfrvv8xv22368), "
+             "you can get this by doing {daemon} tendermint show-address",
     )
     parser.add_argument(
         "-v",
         "--valoper_address",
         dest="valoper_address",
         required=True,
-        help="Valoper address of validator (ex. cosmosvaloper140l6y2gp3gxvay6qtn70re7z2s0gn57zfd832j), you can get this by doing {daemon} keys show --bech=val -a {keyname}",
+        help="Valoper address of validator (ex. cosmosvaloper140l6y2gp3gxvay6qtn70re7z2s0gn57zfd832j), "
+             "you can get this by doing {daemon} keys show --bech=val -a {keyname}",
     )
     parser.add_argument(
         "-s",
@@ -347,6 +369,7 @@ def main():
     global BIN_DIR
     args = parseArgs()
     denom = args.denom
+    min_refund = args.min_refund
     daemon = args.daemon
     chain_id = args.chain_id
     endpoint = args.endpoint
@@ -360,12 +383,13 @@ def main():
     should_broadcast = not args.no_broadcast
     logger.debug(f"DEBUG: args: {args}")
 
-    BIN_DIR = get_daemon_path(daemon)
+    if not BIN_DIR:
+        BIN_DIR = get_daemon_path(daemon)
 
     slash_block = getSlashBlock(endpoint, valcons_address)
     logger.info(f"Slash block: {slash_block}")
     refund_amounts = calculateRefundAmounts(
-        daemon, endpoint, chain_id, slash_block, valoper_address
+        daemon, endpoint, chain_id, slash_block, valoper_address, min_refund
     )
 
     writeRefundsCsv(refund_amounts)

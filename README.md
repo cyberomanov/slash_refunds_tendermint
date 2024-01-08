@@ -34,7 +34,7 @@ cd slash_refunds_tendermint
 python3 src/slash_refund.py --denom {denom} --daemon {daemon} --c {chain_id} -e {rpc_endpoint} -vc {valcons_address} -v {valoper_address} -s {send_address}
 
 # example:
-python3 src/slash_refund.py --denom uatom --daemon gaiad --c cosmoshub-4 -e http://65.21.132.124:10657 -vc cosmosvalcons1c5e86exd7jsyhcfqdejltdsagjfrvv8xv22368 -v cosmosvaloper140l6y2gp3gxvay6qtn70re7z2s0gn57zfd832j -s cosmos15s9vggt9d0xumzqeq89scy4lku4k6qlzvvv2lz -m "With 💜 from Lavender.Five Nodes 🐝"
+python3 src/slash_refund.py --denom uatom --min_refund 100 --daemon gaiad --c cosmoshub-4 -e http://65.21.132.124:10657 -vc cosmosvalcons1c5e86exd7jsyhcfqdejltdsagjfrvv8xv22368 -v cosmosvaloper140l6y2gp3gxvay6qtn70re7z2s0gn57zfd832j -s cosmos15s9vggt9d0xumzqeq89scy4lku4k6qlzvvv2lz -m "With 💜 from Lavender.Five Nodes 🐝"
 ```
 
 This will output two different kinds of files
@@ -51,6 +51,8 @@ Create json file for refunding slashing to delegators
 optional arguments:
   -h, --help            show this help message and exit
   --denom DENOM         denom for refunds (ex. uatom)
+  --mr MIN_REFUND, --min_refund MIN_REFUND
+                        the minimum threshold for slashing compensation (ex. to refund any value more than 0.001 $ATOM, you should set --min_refund 1000)
   --daemon DAEMON       daemon for refunds (ex. gaiad)
   -c CHAIN_ID, --chain_id CHAIN_ID
                         Chain ID (ex. cosmoshub-4)
